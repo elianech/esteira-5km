@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Treino Esteira 5km</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Esteira 5K">
+<meta name="theme-color" content="#00e5a0">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c27;
+    --border: #2a2a3a;
+    --accent: #00e5a0;
+    --accent2: #ff6b6b;
+    --accent3: #ffd166;
+    --text: #f0f0f5;
+    --muted: #7a7a9a;
+    --warmup: #4cc9f0;
+    --active: #00e5a0;
+    --rest: #ffd166;
+    --cooldown: #a78bfa;
+    --repeat: #f472b6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* grid noise texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 0 0 120px; }
+
+  /* HEADER */
+  .header {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .week-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+  }
+
+  /* WORKOUT SELECTOR */
+  .selector-section { padding: 20px; }
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .week-tabs {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px;
+  }
+  .week-tab {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .week-tab.active {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+    font-weight: 700;
+  }
+
+  .workout-cards { display: flex; flex-direction: column; gap: 8px; }
+  .workout-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .workout-card:hover { border-color: var(--accent); }
+  .workout-card.selected {
+    border-color: var(--accent);
+    background: rgba(0,229,160,0.06);
+  }
+  .workout-card-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .workout-card-info { flex: 1; min-width: 0; }
+  .workout-card-name {
+    font-size: 14px; font-weight: 500; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .workout-card-meta {
+    font-size: 12px; color: var(--muted); margin-top: 2px;
+    font-family: 'Space Mono', monospace;
+  }
+  .workout-card-arrow { color: var(--muted); font-size: 18px; }
+
+  /* TRAINING SCREEN */
+  .training-screen { display: none; flex-direction: column; }
+  .training-screen.active { display: flex; }
+
+  /* BIG TIMER */
+  .timer-area {
+    padding: 24px 20px 16px;
+    text-align: center;
+  }
+  .phase-label {
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    font-family: 'Space Mono', monospace;
+    margin-bottom: 12px;
+    transition: color .3s;
+  }
+  .big-timer {
+    font-family: 'Space Mono', monospace;
+    font-size: 80px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -2px;
+    transition: color .3s;
+  }
+  .step-counter {
+    font-size: 12px; color: var(--muted); margin-top: 8px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* SPEED TARGET */
+  .speed-card {
+    margin: 0 20px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .speed-label { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+  .speed-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 32px; font-weight: 700;
+    transition: color .3s;
+  }
+  .speed-unit { font-size: 13px; color: var(--muted); margin-left: 4px; }
+
+  /* PROGRESS BAR */
+  .progress-area { padding: 0 20px 16px; }
+  .progress-track {
+    height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: var(--accent); border-radius: 2px;
+    transition: width .5s linear, background .3s;
+  }
+  .progress-labels {
+    display: flex; justify-content: space-between;
+    margin-top: 6px; font-size: 11px; color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* STEPS TIMELINE */
+  .steps-list {
+    padding: 0 20px 16px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .step-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 10px;
+    border: 1px solid transparent;
+    background: var(--surface);
+    opacity: 0.45;
+    transition: all .3s;
+  }
+  .step-item.current {
+    opacity: 1;
+    border-color: currentColor;
+  }
+  .step-item.done { opacity: 0.25; }
+  .step-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .step-name { font-size: 13px; font-weight: 500; }
+  .step-dur { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); margin-left: auto; }
+
+  /* CONTROLS */
+  .controls {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px;
+    padding: 16px 20px;
+    background: linear-gradient(transparent, var(--bg) 30%);
+    display: flex; gap: 10px; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .btn {
+    border: none; cursor: pointer; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; transition: all .15s; outline: none;
+  }
+  .btn-main {
+    width: 72px; height: 72px;
+    background: var(--accent);
+    color: #000;
+    font-size: 26px;
+    box-shadow: 0 0 30px rgba(0,229,160,0.4);
+  }
+  .btn-main:active { transform: scale(0.94); }
+  .btn-sec {
+    width: 52px; height: 52px;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-sec:active { transform: scale(0.94); }
+  .btn-voice {
+    width: 52px; height: 52px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--accent3);
+  }
+  .btn-voice.muted { color: var(--muted); }
+
+  .start-btn-area {
+    padding: 20px;
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px;
+    background: linear-gradient(transparent, var(--bg) 30%);
+  }
+  .btn-start {
+    width: 100%; padding: 18px;
+    background: var(--accent);
+    color: #000;
+    border: none; border-radius: 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 15px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+    cursor: pointer;
+    transition: all .2s;
+    box-shadow: 0 0 30px rgba(0,229,160,0.3);
+  }
+  .btn-start:hover { box-shadow: 0 0 40px rgba(0,229,160,0.5); }
+  .btn-start:active { transform: scale(0.98); }
+  .btn-start:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* FINISH SCREEN */
+  .finish-screen {
+    display: none; padding: 40px 20px; text-align: center; flex-direction: column; align-items: center;
+  }
+  .finish-screen.active { display: flex; }
+  .finish-emoji { font-size: 64px; margin-bottom: 16px; }
+  .finish-title { font-family: 'Space Mono', monospace; font-size: 24px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+  .finish-sub { font-size: 15px; color: var(--muted); margin-bottom: 32px; }
+  .finish-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; margin-bottom: 32px; }
+  .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+  .stat-val { font-family: 'Space Mono', monospace; font-size: 22px; font-weight: 700; color: var(--accent); }
+  .stat-lbl { font-size: 11px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
+  .btn-restart {
+    width: 100%; padding: 16px;
+    background: transparent; color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 12px;
+    font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase; cursor: pointer;
+  }
+
+  /* voice test banner */
+  .voice-banner {
+    margin: 0 20px 16px;
+    background: rgba(255,209,102,0.08);
+    border: 1px solid rgba(255,209,102,0.25);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--accent3);
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .selector-view { display: block; }
+  .selector-view.hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">▶ ESTEIRA 5K</div>
+    <div class="week-badge" id="header-week">SELECIONE UM TREINO</div>
+  </div>
+
+  <!-- SELECTOR VIEW -->
+  <div class="selector-view" id="selector-view">
+    <div class="selector-section">
+      <div class="section-label">Semana</div>
+      <div class="week-tabs" id="week-tabs"></div>
+      <div class="section-label" style="margin-top:4px;">Treino do dia</div>
+      <div class="workout-cards" id="workout-cards"></div>
+    </div>
+    <div class="voice-banner">
+      <span>🎙</span>
+      <span>A voz anunciará cada fase, velocidade e tempo restante. Use fone de ouvido.</span>
+    </div>
+    <div class="start-btn-area">
+      <button class="btn-start" id="btn-start" disabled onclick="startWorkout()">▶ INICIAR TREINO</button>
+    </div>
+  </div>
+
+  <!-- TRAINING VIEW -->
+  <div class="training-screen" id="training-screen">
+    <div class="timer-area">
+      <div class="phase-label" id="phase-label">AQUECIMENTO</div>
+      <div class="big-timer" id="big-timer">05:00</div>
+      <div class="step-counter" id="step-counter">Etapa 1 de 3</div>
+    </div>
+
+    <div class="speed-card">
+      <div>
+        <div class="speed-label">Velocidade alvo</div>
+        <div style="margin-top:4px;">
+          <span class="speed-value" id="speed-val">7.5</span>
+          <span class="speed-unit">km/h</span>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="speed-label">Próxima fase</div>
+        <div style="font-family:'Space Mono',monospace; font-size:16px; color:var(--muted); margin-top:4px;" id="next-phase">—</div>
+      </div>
+    </div>
+
+    <div class="progress-area">
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+      <div class="progress-labels">
+        <span id="elapsed-label">0:00</span>
+        <span id="total-label">0:00</span>
+      </div>
+    </div>
+
+    <div class="steps-list" id="steps-list"></div>
+
+    <div style="height: 100px;"></div>
+
+    <div class="controls">
+      <button class="btn btn-sec btn-voice" id="btn-voice" onclick="toggleVoice()" title="Silenciar voz">🔊</button>
+      <button class="btn btn-main" id="btn-playpause" onclick="togglePlayPause()">⏸</button>
+      <button class="btn btn-sec" onclick="stopWorkout()" title="Encerrar treino">⏹</button>
+    </div>
+  </div>
+
+  <!-- FINISH VIEW -->
+  <div class="finish-screen" id="finish-screen">
+    <div class="finish-emoji">🏆</div>
+    <div class="finish-title">TREINO CONCLUÍDO!</div>
+    <div class="finish-sub" id="finish-sub">Ótimo trabalho!</div>
+    <div class="finish-stats">
+      <div class="stat-box">
+        <div class="stat-val" id="stat-time">00:00</div>
+        <div class="stat-lbl">Tempo total</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="stat-steps">0</div>
+        <div class="stat-lbl">Etapas</div>
+      </div>
+    </div>
+    <button class="btn-restart" onclick="resetApp()">↩ NOVO TREINO</button>
+  </div>
+
+</div>
+
+<script>
+// ─── WORKOUT DATA ─────────────────────────────────────────────────────────────
+const WEEKS = [
+  { label: "Sem 1", workouts: [
+    { name: "Seg — Contínuo Leve", icon: "🟢", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:1200, vLo:7.3, vHi:7.7, label:"Corrida Leve" },
+        { type:"cooldown", dur:120,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Ter — Caminhada Ativa", icon: "🚶", type: "walk",
+      steps: [
+        { type:"warmup",   dur:180,  vLo:4.5, vHi:5.0, label:"Aquecimento" },
+        { type:"active",   dur:1800, vLo:5.3, vHi:5.7, label:"Caminhada Rápida" },
+        { type:"cooldown", dur:120,  vLo:4.5, vHi:5.0, label:"Desaquecimento" },
+      ]},
+    { name: "Qui — Intervalado 5×2min", icon: "🔁", type: "hiit",
+      steps: [
+        { type:"warmup",   dur:300, vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:120, vLo:7.8, vHi:8.2, label:"Esforço 1" },
+        { type:"rest",     dur:120, vLo:5.8, vHi:6.2, label:"Recuperação 1" },
+        { type:"active",   dur:120, vLo:7.8, vHi:8.2, label:"Esforço 2" },
+        { type:"rest",     dur:120, vLo:5.8, vHi:6.2, label:"Recuperação 2" },
+        { type:"active",   dur:120, vLo:7.8, vHi:8.2, label:"Esforço 3" },
+        { type:"rest",     dur:120, vLo:5.8, vHi:6.2, label:"Recuperação 3" },
+        { type:"active",   dur:120, vLo:7.8, vHi:8.2, label:"Esforço 4" },
+        { type:"rest",     dur:120, vLo:5.8, vHi:6.2, label:"Recuperação 4" },
+        { type:"active",   dur:120, vLo:7.8, vHi:8.2, label:"Esforço 5" },
+        { type:"rest",     dur:120, vLo:5.8, vHi:6.2, label:"Recuperação 5" },
+        { type:"cooldown", dur:120, vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Sáb — Progressivo", icon: "📈", type: "prog",
+      steps: [
+        { type:"warmup",   dur:300, vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:600, vLo:6.8, vHi:7.2, label:"Fase 1 — 7 km/h" },
+        { type:"active",   dur:600, vLo:7.3, vHi:7.7, label:"Fase 2 — 7,5 km/h" },
+        { type:"active",   dur:600, vLo:7.8, vHi:8.2, label:"Fase 3 — 8 km/h" },
+        { type:"cooldown", dur:180, vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+  ]},
+  { label: "Sem 2", workouts: [
+    { name: "Seg — Contínuo 3km", icon: "🟢", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:1440, vLo:7.3, vHi:7.7, label:"Corrida 3km" },
+        { type:"cooldown", dur:120,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Ter — Caminhada c/ Inclinação", icon: "🚶", type: "walk",
+      steps: [
+        { type:"warmup",   dur:180,  vLo:4.5, vHi:5.0, label:"Aquecimento" },
+        { type:"active",   dur:1800, vLo:5.8, vHi:6.2, label:"Caminhada Rápida 3%" },
+        { type:"cooldown", dur:120,  vLo:4.5, vHi:5.0, label:"Desaquecimento" },
+      ]},
+    { name: "Qui — Intervalado 6×2min", icon: "🔁", type: "hiit",
+      steps: [
+        { type:"warmup",   dur:300, vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        ...[...Array(6)].flatMap((_,i) => [
+          { type:"active", dur:120, vLo:7.8, vHi:8.2, label:`Esforço ${i+1}` },
+          { type:"rest",   dur:90,  vLo:5.8, vHi:6.2, label:`Recuperação ${i+1}` },
+        ]),
+        { type:"cooldown", dur:120, vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Sáb — Progressivo 7,5→8,5", icon: "📈", type: "prog",
+      steps: [
+        { type:"warmup",   dur:300, vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:600, vLo:7.3, vHi:7.7, label:"Fase 1 — 7,5 km/h" },
+        { type:"active",   dur:600, vLo:7.8, vHi:8.2, label:"Fase 2 — 8 km/h" },
+        { type:"active",   dur:600, vLo:8.3, vHi:8.7, label:"Fase 3 — 8,5 km/h" },
+        { type:"cooldown", dur:180, vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+  ]},
+  { label: "Sem 3", workouts: [
+    { name: "Seg — Contínuo 3,5km", icon: "🟢", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:1560, vLo:7.8, vHi:8.2, label:"Corrida 3,5km" },
+        { type:"cooldown", dur:120,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Ter — Intervalado 4×3min", icon: "🔁", type: "hiit",
+      steps: [
+        { type:"warmup",   dur:300, vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        ...[...Array(4)].flatMap((_,i) => [
+          { type:"active", dur:180, vLo:8.3, vHi:8.7, label:`Esforço ${i+1}` },
+          { type:"rest",   dur:120, vLo:6.3, vHi:6.7, label:`Recuperação ${i+1}` },
+        ]),
+        { type:"cooldown", dur:120, vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Qui — Long Run 35min", icon: "🏃", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:2100, vLo:7.3, vHi:7.7, label:"Corrida 35 min" },
+        { type:"cooldown", dur:180,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Sáb — Progressivo 7,5→8,5", icon: "📈", type: "prog",
+      steps: [
+        { type:"warmup",   dur:300, vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:720, vLo:7.3, vHi:7.7, label:"Fase 1 — 7,5 km/h" },
+        { type:"active",   dur:720, vLo:7.8, vHi:8.2, label:"Fase 2 — 8 km/h" },
+        { type:"active",   dur:720, vLo:8.3, vHi:8.7, label:"Fase 3 — 8,5 km/h" },
+        { type:"cooldown", dur:180, vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+  ]},
+  { label: "Sem 4", workouts: [
+    { name: "Seg — Contínuo 30min", icon: "🟢", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:1800, vLo:7.8, vHi:8.2, label:"Corrida 30 min" },
+        { type:"cooldown", dur:120,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Ter — Intervalado 5×3min", icon: "🔁", type: "hiit",
+      steps: [
+        { type:"warmup",   dur:300, vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        ...[...Array(5)].flatMap((_,i) => [
+          { type:"active", dur:180, vLo:8.8, vHi:9.2, label:`Esforço ${i+1}` },
+          { type:"rest",   dur:90,  vLo:6.3, vHi:6.7, label:`Recuperação ${i+1}` },
+        ]),
+        { type:"cooldown", dur:180, vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Qui — Long Run 40min", icon: "🏃", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:2400, vLo:7.8, vHi:8.2, label:"Corrida 40 min" },
+        { type:"cooldown", dur:180,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Sáb — Progressivo até 9km/h", icon: "📈", type: "prog",
+      steps: [
+        { type:"warmup",   dur:300, vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:600, vLo:7.8, vHi:8.2, label:"Fase 1 — 8 km/h" },
+        { type:"active",   dur:600, vLo:8.3, vHi:8.7, label:"Fase 2 — 8,5 km/h" },
+        { type:"active",   dur:600, vLo:8.8, vHi:9.2, label:"Fase 3 — 9 km/h" },
+        { type:"cooldown", dur:180, vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+  ]},
+  { label: "Sem 5", workouts: [
+    { name: "Seg — Contínuo 35min", icon: "🟢", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:2100, vLo:7.8, vHi:8.2, label:"Corrida 35 min" },
+        { type:"cooldown", dur:120,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Ter — Intervalado 6×3min", icon: "🔁", type: "hiit",
+      steps: [
+        { type:"warmup",   dur:300, vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        ...[...Array(6)].flatMap((_,i) => [
+          { type:"active", dur:180, vLo:8.8, vHi:9.2, label:`Esforço ${i+1}` },
+          { type:"rest",   dur:60,  vLo:6.3, vHi:6.7, label:`Recuperação ${i+1}` },
+        ]),
+        { type:"cooldown", dur:180, vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Qui — Long Run 45min", icon: "🏃", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:2700, vLo:7.8, vHi:8.2, label:"Corrida 45 min" },
+        { type:"cooldown", dur:180,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Sáb — TESTE 5km ⭐", icon: "⭐", type: "teste",
+      steps: [
+        { type:"warmup",   dur:480,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:2400, vLo:7.3, vHi:8.2, label:"5km — Teste!" },
+        { type:"cooldown", dur:300,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+  ]},
+  { label: "Sem 6", workouts: [
+    { name: "Seg — Recuperação 30min", icon: "🟢", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:1800, vLo:7.3, vHi:7.7, label:"Corrida Leve" },
+        { type:"cooldown", dur:120,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Ter — Intervalado 5×4min", icon: "🔁", type: "hiit",
+      steps: [
+        { type:"warmup",   dur:300, vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        ...[...Array(5)].flatMap((_,i) => [
+          { type:"active", dur:240, vLo:8.8, vHi:9.2, label:`Esforço ${i+1}` },
+          { type:"rest",   dur:60,  vLo:6.8, vHi:7.2, label:`Recuperação ${i+1}` },
+        ]),
+        { type:"cooldown", dur:180, vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Qui — Long Run 45min", icon: "🏃", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:2700, vLo:8.3, vHi:8.7, label:"Corrida 45 min" },
+        { type:"cooldown", dur:180,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Sáb — 5km Recorde Pessoal", icon: "🏅", type: "teste",
+      steps: [
+        { type:"warmup",   dur:480,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:2250, vLo:7.8, vHi:8.7, label:"5km — Bata o recorde!" },
+        { type:"cooldown", dur:300,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+  ]},
+  { label: "Sem 7", workouts: [
+    { name: "Seg — Contínuo 40min", icon: "🟢", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:2400, vLo:8.3, vHi:8.7, label:"Corrida 40 min" },
+        { type:"cooldown", dur:120,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Ter — Intervalado 8×2min", icon: "🔁", type: "hiit",
+      steps: [
+        { type:"warmup",   dur:300, vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        ...[...Array(8)].flatMap((_,i) => [
+          { type:"active", dur:120, vLo:9.3, vHi:9.7, label:`Esforço ${i+1}` },
+          { type:"rest",   dur:90,  vLo:6.8, vHi:7.2, label:`Recuperação ${i+1}` },
+        ]),
+        { type:"cooldown", dur:180, vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Qui — Long Run 50min", icon: "🏃", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:3000, vLo:8.3, vHi:8.7, label:"Corrida 50 min" },
+        { type:"cooldown", dur:180,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Sáb — 5km Progressivo", icon: "📈", type: "prog",
+      steps: [
+        { type:"warmup",   dur:480,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:2000, vLo:7.8, vHi:9.2, label:"5km Progressivo" },
+        { type:"cooldown", dur:300,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+  ]},
+  { label: "Sem 8", workouts: [
+    { name: "Seg — Contínuo 45min", icon: "🟢", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:2700, vLo:8.3, vHi:8.7, label:"Corrida 45 min" },
+        { type:"cooldown", dur:120,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Ter — Intervalado 6×4min", icon: "🔁", type: "hiit",
+      steps: [
+        { type:"warmup",   dur:300, vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        ...[...Array(6)].flatMap((_,i) => [
+          { type:"active", dur:240, vLo:9.3, vHi:9.7, label:`Esforço ${i+1}` },
+          { type:"rest",   dur:60,  vLo:6.8, vHi:7.2, label:`Recuperação ${i+1}` },
+        ]),
+        { type:"cooldown", dur:180, vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Qui — Long Run 55min", icon: "🏃", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:3300, vLo:8.3, vHi:8.7, label:"Corrida 55 min" },
+        { type:"cooldown", dur:180,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Sáb — 5km Recorde Pessoal", icon: "🏅", type: "teste",
+      steps: [
+        { type:"warmup",   dur:480,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:2100, vLo:8.3, vHi:9.2, label:"5km — Novo recorde!" },
+        { type:"cooldown", dur:300,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+  ]},
+  { label: "Sem 9", workouts: [
+    { name: "Seg — Contínuo 40min", icon: "🟢", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:2400, vLo:7.8, vHi:8.2, label:"Corrida 40 min" },
+        { type:"cooldown", dur:120,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Ter — Intervalado 5×3min", icon: "🔁", type: "hiit",
+      steps: [
+        { type:"warmup",   dur:300, vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        ...[...Array(5)].flatMap((_,i) => [
+          { type:"active", dur:180, vLo:9.3, vHi:9.7, label:`Esforço ${i+1}` },
+          { type:"rest",   dur:90,  vLo:6.8, vHi:7.2, label:`Recuperação ${i+1}` },
+        ]),
+        { type:"cooldown", dur:180, vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Qui — Contínuo 45min", icon: "🏃", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:2700, vLo:7.8, vHi:8.2, label:"Corrida 45 min" },
+        { type:"cooldown", dur:180,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Sáb — Ensaio Geral 5km", icon: "⭐", type: "teste",
+      steps: [
+        { type:"warmup",   dur:480,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:2250, vLo:7.8, vHi:8.7, label:"5km — Ensaio final" },
+        { type:"cooldown", dur:600,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+  ]},
+  { label: "Sem 10 🏆", workouts: [
+    { name: "Ter — Contínuo Leve 30min", icon: "🟢", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:1800, vLo:7.8, vHi:8.2, label:"Corrida Leve" },
+        { type:"cooldown", dur:120,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+    { name: "Qui — Aquecimento Pré-Prova", icon: "🧘", type: "continuo",
+      steps: [
+        { type:"warmup",   dur:300,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:1200, vLo:7.3, vHi:7.7, label:"Corrida Leve" },
+        { type:"cooldown", dur:600,  vLo:5.0, vHi:5.5, label:"Soltura Final" },
+      ]},
+    { name: "Sáb — 🏆 DESAFIO FINAL 5km", icon: "🏆", type: "teste",
+      steps: [
+        { type:"warmup",   dur:600,  vLo:5.0, vHi:5.5, label:"Aquecimento" },
+        { type:"active",   dur:2400, vLo:7.8, vHi:9.2, label:"5km DIRETO — VOCÊ CONSEGUE!" },
+        { type:"cooldown", dur:600,  vLo:5.0, vHi:5.5, label:"Desaquecimento" },
+      ]},
+  ]},
+];
+
+// ─── COLORS ──────────────────────────────────────────────────────────────────
+const TYPE_COLOR = {
+  warmup:   'var(--warmup)',
+  active:   'var(--active)',
+  rest:     'var(--rest)',
+  cooldown: 'var(--cooldown)',
+};
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let selWeek = 0, selWorkout = null, selectedWorkout = null;
+let steps = [], curStep = 0, totalDur = 0;
+let timer = null, running = false, voiceOn = true;
+
+// Tempo real: armazenamos o timestamp absoluto de início e pausas
+let workoutStartTs = null;   // Date.now() quando o treino começou
+let pausedAt = null;         // Date.now() quando pausou
+let totalPausedMs = 0;       // ms acumulados em pausa
+
+// Mapa de alertas já disparados (evita repetir ao retomar)
+let announcedFlags = {};     // `${step}-${tipo}` => true
+
+// Wake Lock handle
+let wakeLock = null;
+
+// ─── WAKE LOCK ────────────────────────────────────────────────────────────────
+async function acquireWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch(e) {}
+}
+
+async function releaseWakeLock() {
+  if (wakeLock) { try { await wakeLock.release(); } catch(e) {} wakeLock = null; }
+}
+
+// Re-adquire wake lock quando a aba volta ao foco (Android libera ao minimizar)
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && running) {
+    await acquireWakeLock();
+    // Recalcula imediatamente ao retomar — corrige qualquer drift de suspensão
+    syncTimer();
+  }
+});
+
+// ─── TEMPO REAL DECORRIDO ─────────────────────────────────────────────────────
+function getElapsedSec() {
+  if (workoutStartTs === null) return 0;
+  const now = running ? Date.now() : (pausedAt || Date.now());
+  return Math.floor((now - workoutStartTs - totalPausedMs) / 1000);
+}
+
+// Calcula step e segundos dentro do step a partir do elapsed total
+function calcPosition(elapsedSec) {
+  let acc = 0;
+  for (let i = 0; i < steps.length; i++) {
+    if (elapsedSec < acc + steps[i].dur) {
+      return { step: i, stepSec: elapsedSec - acc };
+    }
+    acc += steps[i].dur;
+  }
+  return { step: steps.length, stepSec: 0 }; // treino concluído
+}
+
+// ─── AUDIO FOCUS (duck Spotify durante a voz) ────────────────────────────────
+// Usamos Web Audio API para criar um nó "vazio" que força o Android a
+// tratar nosso app como fonte de áudio ativa — acionando o Audio Focus
+// e fazendo o Spotify abaixar automaticamente (ducking), igual ao GPS.
+let audioCtx = null;
+let duckNode = null;
+let duckRestoreTimer = null;
+
+function initAudioContext() {
+  if (audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  } catch(e) {}
+}
+
+function duckOthers(durationMs) {
+  // Cancela restore anterior se houver
+  if (duckRestoreTimer) clearTimeout(duckRestoreTimer);
+  if (!audioCtx) return;
+
+  try {
+    // Cria oscilador silencioso — volume 0, mas mantém o Audio Focus ativo
+    if (duckNode) { try { duckNode.stop(); } catch(e) {} }
+    duckNode = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0.001;          // praticamente silencioso
+    duckNode.connect(gain);
+    gain.connect(audioCtx.destination);
+    duckNode.start();
+
+    // Para o oscilador após a fala terminar + 1s de margem
+    duckRestoreTimer = setTimeout(() => {
+      try { duckNode.stop(); } catch(e) {}
+      duckNode = null;
+    }, durationMs + 1000);
+  } catch(e) {}
+}
+
+// ─── VOICE ───────────────────────────────────────────────────────────────────
+function speak(text, priority = false) {
+  if (!voiceOn || !text) return;
+  if (priority) window.speechSynthesis.cancel();
+
+  // Inicializa AudioContext (exige gesto do usuário — já temos pelo botão Iniciar)
+  initAudioContext();
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang    = 'pt-BR';
+  u.rate    = 1.0;
+  u.pitch   = 1.0;
+  u.volume  = 1.0;
+
+  // Estima duração da fala: ~90ms por caractere em pt-BR a rate 1.0
+  const estimatedMs = Math.max(1500, text.length * 90);
+
+  u.onstart = () => duckOthers(estimatedMs);
+  u.onend   = () => {
+    // Ao terminar, garante que o oscilador pare logo
+    if (duckRestoreTimer) clearTimeout(duckRestoreTimer);
+    duckRestoreTimer = setTimeout(() => {
+      try { if (duckNode) { duckNode.stop(); duckNode = null; } } catch(e) {}
+    }, 400);
+  };
+
+  window.speechSynthesis.speak(u);
+}
+
+function toggleVoice() {
+  voiceOn = !voiceOn;
+  document.getElementById('btn-voice').textContent = voiceOn ? '🔊' : '🔇';
+  document.getElementById('btn-voice').classList.toggle('muted', !voiceOn);
+  speak(voiceOn ? 'Voz ativada' : '', true);
+}
+
+// ─── RENDER SELECTOR ─────────────────────────────────────────────────────────
+function renderSelector() {
+  const tabs = document.getElementById('week-tabs');
+  tabs.innerHTML = WEEKS.map((w,i) =>
+    `<div class="week-tab${i===selWeek?' active':''}" onclick="selectWeek(${i})">${w.label}</div>`
+  ).join('');
+  renderWorkouts();
+}
+
+function selectWeek(i) {
+  selWeek = i; selWorkout = null; selectedWorkout = null;
+  document.getElementById('btn-start').disabled = true;
+  renderSelector();
+}
+
+function renderWorkouts() {
+  const container = document.getElementById('workout-cards');
+  const wk = WEEKS[selWeek];
+  const totalMins = w => Math.round(w.steps.reduce((a,s)=>a+s.dur,0)/60);
+  container.innerHTML = wk.workouts.map((w,i) =>
+    `<div class="workout-card${selWorkout===i?' selected':''}" onclick="selectWorkout(${i})">
+      <div class="workout-card-icon" style="background:rgba(0,229,160,0.08)">${w.icon}</div>
+      <div class="workout-card-info">
+        <div class="workout-card-name">${w.name}</div>
+        <div class="workout-card-meta">${totalMins(w)} min · ${w.steps.length} etapas</div>
+      </div>
+      <div class="workout-card-arrow">${selWorkout===i?'✓':'›'}</div>
+    </div>`
+  ).join('');
+}
+
+function selectWorkout(i) {
+  selWorkout = i;
+  selectedWorkout = WEEKS[selWeek].workouts[i];
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('header-week').textContent = `${WEEKS[selWeek].label}`;
+  renderWorkouts();
+}
+
+// ─── FORMAT ───────────────────────────────────────────────────────────────────
+function fmt(s) {
+  const m = Math.floor(s/60), ss = s%60;
+  return `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+}
+
+// ─── BUILD STEP LIST ──────────────────────────────────────────────────────────
+function buildStepList() {
+  const list = document.getElementById('steps-list');
+  list.innerHTML = steps.map((s,i) =>
+    `<div class="step-item" id="si-${i}" style="color:${TYPE_COLOR[s.type]}">
+      <div class="step-dot" style="background:${TYPE_COLOR[s.type]}"></div>
+      <span class="step-name">${s.label}</span>
+      <span class="step-dur">${fmt(s.dur)}</span>
+    </div>`
+  ).join('');
+}
+
+function updateStepList() {
+  steps.forEach((_,i) => {
+    const el = document.getElementById(`si-${i}`);
+    if (!el) return;
+    el.classList.toggle('current', i===curStep);
+    el.classList.toggle('done', i<curStep);
+  });
+  document.getElementById(`si-${curStep}`)?.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+// ─── UPDATE UI ────────────────────────────────────────────────────────────────
+function updateUI(step, stepSec, totalElapsed) {
+  const s = steps[step];
+  const color = TYPE_COLOR[s.type];
+  const rem = s.dur - stepSec;
+
+  document.getElementById('big-timer').textContent = fmt(rem);
+  document.getElementById('big-timer').style.color = color;
+  document.getElementById('phase-label').textContent = s.label.toUpperCase();
+  document.getElementById('phase-label').style.color = color;
+  document.getElementById('speed-val').textContent = ((s.vLo+s.vHi)/2).toFixed(1);
+  document.getElementById('speed-val').style.color = color;
+  document.getElementById('step-counter').textContent = `Etapa ${step+1} de ${steps.length}`;
+
+  const next = steps[step+1];
+  document.getElementById('next-phase').textContent = next ? next.label : 'Fim!';
+
+  const pct = totalDur > 0 ? Math.min(100, totalElapsed/totalDur*100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-fill').style.background = color;
+  document.getElementById('elapsed-label').textContent = fmt(totalElapsed);
+  document.getElementById('total-label').textContent = fmt(totalDur);
+
+  curStep = step;
+  updateStepList();
+}
+
+// ─── SYNC TIMER (baseado em tempo real) ──────────────────────────────────────
+function syncTimer() {
+  const elapsed = getElapsedSec();
+
+  if (elapsed >= totalDur) {
+    finishWorkout();
+    return;
+  }
+
+  const { step, stepSec } = calcPosition(elapsed);
+  const s = steps[step];
+  const rem = s.dur - stepSec;
+
+  // Anúncios — usa flags para não repetir se o app foi suspenso
+  const flagStep  = `${step}-start`;
+  const flag30    = `${step}-30`;
+  const flag10    = `${step}-10`;
+
+  if (!announcedFlags[flagStep]) {
+    announcedFlags[flagStep] = true;
+    announceStep(step);
+  }
+  if (rem <= 30 && !announcedFlags[flag30]) {
+    announcedFlags[flag30] = true;
+    if (rem > 10) speak(`Trinta segundos para ${s.label} terminar`);
+  }
+  if (rem <= 10 && !announcedFlags[flag10]) {
+    announcedFlags[flag10] = true;
+    speak(`Dez segundos`);
+  }
+
+  updateUI(step, stepSec, elapsed);
+}
+
+function announceStep(i) {
+  const s = steps[i];
+  const midSpeed = ((s.vLo+s.vHi)/2).toFixed(1).replace('.',',');
+  const mins = Math.floor(s.dur/60), secs = s.dur%60;
+  const durStr = mins>0 ? (secs>0 ? `${mins} minuto${mins>1?'s':''} e ${secs} segundos` : `${mins} minuto${mins>1?'s':''}`) : `${secs} segundos`;
+  speak(`${s.label}! Velocidade ${midSpeed} quilômetros por hora. Duração: ${durStr}`, true);
+}
+
+// ─── CONTROLS ────────────────────────────────────────────────────────────────
+function startWorkout() {
+  if (!selectedWorkout) return;
+
+  // Inicializa e desbloqueia AudioContext no gesto do usuário
+  initAudioContext();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+
+  steps = selectedWorkout.steps;
+  totalDur = steps.reduce((a,s)=>a+s.dur,0);
+  curStep = 0;
+  announcedFlags = {};
+  totalPausedMs = 0;
+  pausedAt = null;
+  workoutStartTs = Date.now();
+  running = true;
+
+  document.getElementById('selector-view').classList.add('hidden');
+  document.getElementById('training-screen').classList.add('active');
+  document.getElementById('finish-screen').classList.remove('active');
+
+  buildStepList();
+  acquireWakeLock();
+
+  // Tick a cada 500ms para ser mais responsivo ao retomar da suspensão
+  timer = setInterval(syncTimer, 500);
+  setTimeout(() => announceStep(0), 800);
+  announcedFlags['0-start'] = true;
+}
+
+function togglePlayPause() {
+  running = !running;
+  const btn = document.getElementById('btn-playpause');
+  if (running) {
+    // Retomando: desconta o tempo pausado
+    if (pausedAt !== null) {
+      totalPausedMs += Date.now() - pausedAt;
+      pausedAt = null;
+    }
+    timer = setInterval(syncTimer, 500);
+    btn.textContent = '⏸';
+    acquireWakeLock();
+    speak('Treino retomado', true);
+  } else {
+    pausedAt = Date.now();
+    clearInterval(timer);
+    btn.textContent = '▶';
+    releaseWakeLock();
+    speak('Treino pausado', true);
+  }
+}
+
+function stopWorkout() {
+  clearInterval(timer);
+  releaseWakeLock();
+  speak('Treino encerrado', true);
+  resetApp();
+}
+
+function finishWorkout() {
+  clearInterval(timer);
+  releaseWakeLock();
+  const totalElapsed = getElapsedSec();
+  document.getElementById('training-screen').classList.remove('active');
+  const fs = document.getElementById('finish-screen');
+  fs.classList.add('active');
+  document.getElementById('stat-time').textContent = fmt(Math.min(totalElapsed, totalDur));
+  document.getElementById('stat-steps').textContent = steps.length;
+  const wname = selectedWorkout.name;
+  document.getElementById('finish-sub').textContent = wname.includes('DESAFIO') ? 'Você completou os 5km! Incrível! 🎉' : 'Mais um treino concluído!';
+  speak(`Parabéns! Treino concluído em ${Math.floor(totalDur/60)} minutos. Excelente trabalho!`, true);
+}
+
+function resetApp() {
+  clearInterval(timer);
+  releaseWakeLock();
+  running = false; curStep = 0;
+  workoutStartTs = null; pausedAt = null; totalPausedMs = 0;
+  announcedFlags = {};
+  document.getElementById('selector-view').classList.remove('hidden');
+  document.getElementById('training-screen').classList.remove('active');
+  document.getElementById('finish-screen').classList.remove('active');
+  document.getElementById('btn-playpause').textContent = '⏸';
+  document.getElementById('btn-start').disabled = true;
+  selWorkout = null; selectedWorkout = null;
+  renderSelector();
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+renderSelector();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
